@@ -1,1 +1,1 @@
-B MOVER A BC 
+A  A #$ STOPA
