@@ -1,1 +1,1 @@
-BC MOf A AREG
+B MOVER A BC 

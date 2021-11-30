@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <strings.h>
 #include <ctype.h>
+
+#define VAL_CONC_LENGTH 300
 
 int tokenizer(char *, char *[]);
 char *removeChar(char *, char *);
@@ -45,13 +46,15 @@ int main(int argc, char *argv[])
 
 	while (fgets(line, 80, fp) != NULL)
 	{
+		line[strcspn(line, "\n\r")] = 0;
+
 		if (strstr(line, ",") != NULL)
 		{
 			line = removeChar(line, ",");
 			tokenCount = tokenizer(line, tokens);
 		}
 		tokenCount = tokenizer(line, tokens);
-		line[strcspn(line, "\n")] = 0;
+	
 		switch (tokenCount)
 		{
 		case 1:
@@ -142,11 +145,14 @@ bool isStrInArr(char *str, char *arr[])
 //
 bool valFourTokens(char *tokens[], char *valConc[10])
 {
-	char **arrs[5] = {mnem, registers, cc, ad, ds};
+	char **arrs[5] = {mnem, registers, ad, ds, cc};
 	int temp = 0;
 
+		printf("%s", tokens[3]);
+	// return true;
+
 	// checking for label validity
-	valConc[temp] = (char *)malloc(sizeof(char) * 100);
+	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	for (int i = 0; i < 5; i++)
 	{
 		if (isStrInArr(tokens[0], arrs[i]) || !isalpha(tokens[0][0]))
@@ -154,7 +160,7 @@ bool valFourTokens(char *tokens[], char *valConc[10])
 			strcpy(valConc[temp], "error: Invalid symbolic name, ");
 			strcat(valConc[temp], tokens[0]);
 			strcat(valConc[temp], "\nnote: Reserved word, punctuations or numbers can't be use as a label");
-			valConc[++temp] = (char *)malloc(sizeof(char) * 100);
+			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 			break;
 		}
 	}
@@ -168,12 +174,11 @@ bool valFourTokens(char *tokens[], char *valConc[10])
 			strcpy(valConc[temp], "error: Invalid Mnemonic instruction, ");
 			strcat(valConc[temp], tokens[1]);
 			strcat(valConc[temp], "\nnote: check if you have entered correct opcode.");
-			valConc[++temp] = (char *)malloc(sizeof(char) * 100);
+			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 			break;
 		}
 	}
 
-	printf("----");
 	// checking for operand 1
 	if (isStrInArr(tokens[2], registers) == false)
 	{
@@ -181,26 +186,23 @@ bool valFourTokens(char *tokens[], char *valConc[10])
 		strcpy(valConc[temp], "error: Invalid register operand, ");
 		strcat(valConc[temp], tokens[2]);
 		strcat(valConc[temp], "\nnote: Operand 1 can only be a register or condition code in case of BC.");
-		valConc[++temp] = (char *)malloc(sizeof(char) * 100);
+		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
 
-	printf("----");
 	// checking for operand 2
-	char **arr[] = {mnem, registers, ad, ds};
+	tokens[3][strcspn(tokens[3], "\n")] = 0;
+	char **arr[] = {mnem, ad, ds, registers};
+
+	
 	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; registers[j] != NULL; j++)
-		{
-			printf("%s ", arr[1][j]);
-		}
-		bool f = isStrInArr(tokens[3], arrs[i]);
-		printf("%d", f);
+
 		if (isStrInArr(tokens[3], arr[i]))
 		{
 			strcpy(valConc[temp], "error: Invalid symbolic name, ");
 			strcat(valConc[temp], tokens[3]);
 			strcat(valConc[temp], "\nnote: Check operand 2");
-			valConc[++temp] = (char *)malloc(sizeof(char) * 100);
+			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 			break;
 		}
 	}
