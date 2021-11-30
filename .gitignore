@@ -1,0 +1,5 @@
+*.c~
+*.asm~
+*.un~        
+*.exe
+*.gitignore~
