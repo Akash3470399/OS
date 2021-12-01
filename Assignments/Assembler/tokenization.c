@@ -11,9 +11,9 @@ int tokenizer(char *, char *[]);
 char *removeChar(char *, char *);
 bool isStrInArr(char *, char *[]);
 void clearStrArr(char *[]);
-
-// VALIDITY FUNCTION
-bool valFourTokens(char *[], char *[]);
+bool isNumber(char *);
+	// VALIDITY FUNCTION
+	bool valFourTokens(char *[], char *[]);
 bool valThreeTokens(char *[], char *[]);
 void valTwoOperandMnem(char *[], char *[]);
 void valLabel(char *[], char *[]);
@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
 		case 2:
 			break;
 		case 3:
+
 			if (valThreeTokens(tokens, valConc) == false)
 			{
 				tokenCount = 0; // reusing tokenCount as temp variable
@@ -172,6 +173,18 @@ void clearStrArr(char *ptr[])
 	}
 }
 
+// function to create a  string is a number
+bool isNumber(char *str)
+{
+	int i;
+	for(i = 0; str[i] != '\0'; i++)
+	{
+		if(!isdigit(str[i]))
+			return false;
+	}
+	return true;
+}
+
 // function to check for validity of line with 4 tokens
 // parameters:
 //     tokens : array of strings(tokens)
@@ -200,29 +213,37 @@ bool valThreeTokens(char *tokens[], char *valConc[])
 {
 	char *allowedMnem[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
 	temp = 0; // global variable
+	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 
 	if (isStrInArr(tokens[0], allowedMnem))
 	{
 		valTwoOperandMnem(tokens, valConc);
 	}
-	else // validation for label
+	else 
 	{
+		// validation for label
 		valLabel(tokens, valConc);
 
-		// for  <label> <mnemonic instruction> <memory operand>
-		valOneOperandMnem(tokens, valConc);
-
 		// <label> DS/DC <constant>
-		if (strcmp(tokens[1], "DS") == 0)
+		if((strcmp(tokens[1], "DS" ) == 0) && !isNumber(tokens[2]))
 		{
-			printf("in 3");
+			;
 		}
+		else if (0)
+		{
+		}
+		else
+			valOneOperandMnem(tokens, valConc); // for  <label> <mnemonic instruction> <memory operand>
 	}
+	valConc[temp] = NULL;
+	if (temp > 0)
+		return false;
+	else
+		return true;
 }
 
 void valTwoOperandMnem(char *tokens[], char *valConc[])
 {
-	printf("%s", tokens[0]);
 	char *tempArr[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
 	int mindex = 0;
 	if (!isStrInArr(tokens[0], tempArr))
@@ -237,6 +258,7 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
 
+	
 	// checking for operand 1
 	if (isStrInArr(tokens[mindex + 1], registers) == false)
 	{
@@ -245,9 +267,9 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
-	else if ((strcmp(tokens[mindex + 1], "BC") != 0) && !(isStrInArr(tokens[mindex + 1], cc)))
+	else if ((strcmp(tokens[mindex] , "BC") == 0) && !(isStrInArr(tokens[mindex + 1], cc)))
 	{
-		strcpy(valConc[temp], "error: Invalid register operand, '");
+		strcpy(valConc[temp], "error: Invalid register operand, 1'");
 		strcat(valConc[temp], tokens[mindex + 1]);
 		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
@@ -295,12 +317,13 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	int mindex = 0;
 	if (!isStrInArr(tokens[0], arr))
 		mindex += 1;
+		printf("Token : %s, %d, %s", tokens[mindex], mindex, tokens[mindex+1]);	
 	// validity of mnemonics
 	if (!isStrInArr(tokens[mindex], arr))
 	{
 		strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
 		strcat(valConc[temp], tokens[mindex]);
-		strcat(valConc[temp], "'\nnote: check if you have entered correct opcode.");
+		strcat(valConc[temp], "'\nnote: check if you have entered correct opcode Or check label field.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
 
