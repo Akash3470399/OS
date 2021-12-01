@@ -1,1 +1,3 @@
+A MOVER AREG B
 A  A #$ STOPA
+MOVE AREG Bfsd

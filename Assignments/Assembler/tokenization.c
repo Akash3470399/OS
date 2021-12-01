@@ -15,7 +15,12 @@ void clearStrArr(char *[]);
 // VALIDITY FUNCTION
 bool valFourTokens(char *[], char *[]);
 bool valThreeTokens(char *[], char *[]);
+void valTwoOperandMnem(char *[], char *[]);
+void valLabel(char *[], char *[]);
+void valOneOperandMnem(char *[], char *[]);
 
+// GLOBAL VARAIBLES
+int temp = 0;
 
 // GLOBAL KAYWORDS ARRAYS
 char *mnem[] = {"STOP", "ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", "READ", "PRINT", NULL};
@@ -58,7 +63,7 @@ int main(int argc, char *argv[])
 			tokenCount = tokenizer(line, tokens);
 		}
 		tokenCount = tokenizer(line, tokens);
-	
+
 		switch (tokenCount)
 		{
 		case 1:
@@ -160,7 +165,7 @@ bool isStrInArr(char *str, char *arr[])
 void clearStrArr(char *ptr[])
 {
 	int i = 0;
-	while(ptr[i] != NULL)
+	while (ptr[i] != NULL)
 	{
 		free(ptr[i]);
 		i++;
@@ -175,12 +180,100 @@ void clearStrArr(char *ptr[])
 //
 bool valFourTokens(char *tokens[], char *valConc[10])
 {
+	temp = 0;
+	valLabel(tokens, valConc); // to validate label
+
+	valTwoOperandMnem(tokens, valConc); // to validate mnemonics with 2 operands
+
+	valConc[temp] = NULL;
+	if (temp > 0)
+		return false;
+	else
+		return true;
+}
+
+// function for validation line code with 3 tokens
+// parameters:
+//     tokens : array of tokens
+//     valConc : validation conclusion array of string
+bool valThreeTokens(char *tokens[], char *valConc[])
+{
+	char *allowedMnem[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
+	temp = 0; // global variable
+
+	if (isStrInArr(tokens[0], allowedMnem))
+	{
+		valTwoOperandMnem(tokens, valConc);
+	}
+	else // validation for label
+	{
+		valLabel(tokens, valConc);
+
+		// for  <label> <mnemonic instruction> <memory operand>
+		valOneOperandMnem(tokens, valConc);
+
+		// <label> DS/DC <constant>
+		if (strcmp(tokens[1], "DS") == 0)
+		{
+			printf("in 3");
+		}
+	}
+}
+
+void valTwoOperandMnem(char *tokens[], char *valConc[])
+{
+	printf("%s", tokens[0]);
+	char *tempArr[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
+	int mindex = 0;
+	if (!isStrInArr(tokens[0], tempArr))
+		mindex += 1;
+
+	// checking for mnemonic validation
+	if (!isStrInArr(tokens[mindex], tempArr))
+	{
+		strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
+		strcat(valConc[temp], tokens[mindex]);
+		strcat(valConc[temp], "'\nnote: check if you have entered correct opcode.");
+		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+	}
+
+	// checking for operand 1
+	if (isStrInArr(tokens[mindex + 1], registers) == false)
+	{
+		strcpy(valConc[temp], "error: Invalid register operand, '");
+		strcat(valConc[temp], tokens[mindex + 1]);
+		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
+		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+	}
+	else if ((strcmp(tokens[mindex + 1], "BC") != 0) && !(isStrInArr(tokens[mindex + 1], cc)))
+	{
+		strcpy(valConc[temp], "error: Invalid register operand, '");
+		strcat(valConc[temp], tokens[mindex + 1]);
+		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
+		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+	}
+
+	// checking for operand 2
+	tokens[mindex + 2][strcspn(tokens[mindex + 2], "\n")] = 0;
+	char **arr[] = {mnem, ad, ds, registers};
+
+	for (int i = 0; i < 4; i++)
+	{
+
+		if (isStrInArr(tokens[mindex + 2], arr[i]))
+		{
+			strcpy(valConc[temp], "error: Invalid symbolic name, '");
+			strcat(valConc[temp], tokens[mindex + 2]);
+			strcat(valConc[temp], "'\nnote: Check operand 2");
+			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+			break;
+		}
+	}
+}
+
+void valLabel(char *tokens[], char *valConc[])
+{
 	char **arrs[5] = {mnem, registers, ad, ds, cc};
-	int temp = 0;
-
-		printf("%s", tokens[3]);
-	// return true;
-
 	// checking for label validity
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	for (int i = 0; i < 5; i++)
@@ -194,73 +287,36 @@ bool valFourTokens(char *tokens[], char *valConc[10])
 			break;
 		}
 	}
+}
 
-	// checking for mnemonic validation
-	char *tempArr[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
-	for (int i = 0; i < 5; i++)
+void valOneOperandMnem(char *tokens[], char *valConc[])
+{
+	char *arr[] = {"STOP", "READ", "PRINT", NULL};
+	int mindex = 0;
+	if (!isStrInArr(tokens[0], arr))
+		mindex += 1;
+	// validity of mnemonics
+	if (!isStrInArr(tokens[mindex], arr))
 	{
-		if (!isStrInArr(tokens[1], tempArr))
-		{
-			strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
-			strcat(valConc[temp], tokens[1]);
-			strcat(valConc[temp], "'\nnote: check if you have entered correct opcode.");
-			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-			break;
-		}
-	}
-
-	// checking for operand 1
-	if (isStrInArr(tokens[2], registers) == false )
-	{
-		strcpy(valConc[temp], "error: Invalid register operand, '");
-		strcat(valConc[temp], tokens[2]);
-		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
+		strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
+		strcat(valConc[temp], tokens[mindex]);
+		strcat(valConc[temp], "'\nnote: check if you have entered correct opcode.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
-	else if((strcmp(tokens[1], "BC") != 0) && !(isStrInArr(tokens[2], cc)))
-	{
-			strcpy(valConc[temp], "error: Invalid register operand, '");
-		        strcat(valConc[temp], tokens[2]);
-			strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
-			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);	
-	}
 
-	// checking for operand 2
-	tokens[3][strcspn(tokens[3], "\n")] = 0;
-	char **arr[] = {mnem, ad, ds, registers};
-	
+	tokens[mindex + 1][strcspn(tokens[mindex + 1], "\n")] = 0;
+	char **arr1[] = {mnem, ad, ds, registers};
+
 	for (int i = 0; i < 4; i++)
 	{
 
-		if (isStrInArr(tokens[3], arr[i]))
+		if (isStrInArr(tokens[mindex + 1], arr1[i]))
 		{
 			strcpy(valConc[temp], "error: Invalid symbolic name, '");
-			strcat(valConc[temp], tokens[3]);
+			strcat(valConc[temp], tokens[mindex + 1]);
 			strcat(valConc[temp], "'\nnote: Check operand 2");
 			valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 			break;
 		}
 	}
-
-	valConc[temp] = NULL;
-	if (temp > 0)
-		return false;
-	else
-		return true;
-}
-
-// function for validation line code with 3 tokens
-// parameters:
-//     tokens : array of tokens
-//     valConc : validation conclusion array of string 
-bool valThreeTokens(char *tokens[], char *valConc[])
-{ 	char *allowedMnem[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
-	char **arrs[5] = {registers, ad, cc, ds, NULL};
-	int temp = 0;
-	valConc[temp] = (char *)malloc(sizeof(char )*VAL_CONC_LENGTH);
-	
-
-	// checking for code line with 1 mnemonics & 2 operands
-
-	
 }
