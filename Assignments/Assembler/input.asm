@@ -1,1 +1,2 @@
-STOP BC,  ,AREG B
+BC dEQ ,g
+MOVER 34

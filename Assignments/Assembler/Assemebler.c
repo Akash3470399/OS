@@ -13,6 +13,7 @@ bool isStrInArr(char *, char *[]);
 void clearStrArr(char *[]);
 bool isNumber(char *);
 bool isValidAddress(char *);
+bool isValidLabel(char *);
 
 // VALIDITY FUNCTION
 bool valFourTokens(char *[], char *[]);
@@ -25,7 +26,7 @@ void valOneOperandMnem(char *[], char *[]);
 void valNoOperandMnem(char *[], char *[]);
 
 // GLOBAL VARAIBLES
-int temp = 0;
+int temp = 0, errors = 0;
 
 // GLOBAL KAYWORDS ARRAYS
 char *mnem[] = {"STOP", "ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", "READ", "PRINT", NULL};
@@ -73,9 +74,12 @@ int main(int argc, char *argv[])
 		switch (tokenCount)
 		{
 		case 1: if(valOneToken(tokens, valConc) == false)
-				printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[0], line);
-				
-			break;
+					{
+						printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[0], line);
+						errors++;
+					}	
+					
+					break;
 		case 2:
 			if (valTwoTokens(tokens, valConc) == false)
 			{
@@ -83,7 +87,7 @@ int main(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;
+					tokenCount++;errors++;
 				}
 			}
 			break;
@@ -95,7 +99,7 @@ int main(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;
+					tokenCount++;errors++;
 				}
 			}
 			break;
@@ -106,7 +110,7 @@ int main(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;
+					tokenCount++;errors++;
 				}
 			}
 
@@ -115,12 +119,13 @@ int main(int argc, char *argv[])
 		default:
 			printf("%s ", tokens[0]);
 			printf("Invalid statement ");
+			errors++;
 		}
 
 		lineNo++;
 	}
 
-	if(temp == 0)
+	if(errors == 0)
 	{
 		printf("\033[0;32m");
 		printf("\n\t*****");
@@ -226,6 +231,19 @@ bool isValidAddress(char *add)
 
 	if(strlen(add) > 3)
 		return false;
+
+	return true;
+}
+// function to check if a str is valid label
+bool isValidLabel(char *str)
+{
+	char **arrs[5] = {mnem, registers, ad, ds, cc};
+	// checking for label validity
+	for (int i = 0; i < 5; i++)
+	{
+		if (isStrInArr(str, arrs[i]) || !isalpha(str[0]))
+			return false;
+	}
 
 	return true;
 }
@@ -358,18 +376,17 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 
 	
 	// checking for operand 1
-	if (isStrInArr(tokens[mindex + 1], registers) == false)
+	if ((strcmp(tokens[mindex], "BC") == 0) && (!(isStrInArr(tokens[mindex + 1], cc)) || !(isValidLabel(tokens[mindex+2]))))
+	{
+		strcpy(valConc[temp], "error: Invalid operands of BC statements, ");
+		strcat(valConc[temp], "\nnote: check you have enter correct condition code & memory label.");
+		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+	}
+	else if (!isStrInArr(tokens[mindex + 1], registers) && strcmp(tokens[mindex+1], "BC") == 0)
 	{
 		strcpy(valConc[temp], "error: Invalid register operand, '");
 		strcat(valConc[temp], tokens[mindex + 1]);
 		strcat(valConc[temp], "'\nnote: Operand 1 can only be a register or condition code in case of BC.");
-		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-	}
-	else if ((strcmp(tokens[mindex] , "BC") == 0) && !(isStrInArr(tokens[mindex + 1], cc)))
-	{
-		strcpy(valConc[temp], "error: Invalid register operand, '");
-		strcat(valConc[temp], tokens[mindex + 1]);
-		strcat(valConc[temp], "'\nnote: check you have enter correct condition code..");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
 
