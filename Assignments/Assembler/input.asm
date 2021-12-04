@@ -1,1 +1,1 @@
-a B LE 5
+STOP BC,  ,AREG B
