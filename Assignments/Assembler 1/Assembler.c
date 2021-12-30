@@ -16,6 +16,8 @@ void clearStrArr(char *[]);
 bool isNumber(char *);
 bool isValidAddress(char *);
 bool isValidLabel(char *);
+bool isValidLiteral(char *);
+void createds(char *[], int);
 
 // VALIDITY FUNCTION
 bool valFourTokens(char *[], char *[]);
@@ -42,9 +44,10 @@ char *ds[] = {"DS", "DC", NULL};
 int main(int argc, char *argv[])
 {
 	pass1(argc, argv);
+	printSymTab();
+	printLitTab();
 	return 0;
 }
-
 
 int pass1(int argc, char *argv[])
 {
@@ -68,11 +71,12 @@ int pass1(int argc, char *argv[])
 	line = (char *)malloc(sizeof(char) * 80);
 	fgets(line, 80, fp);
 	tokenCount = tokenizer(line, tokens);
-	if(strcmp(tokens[0], "START") == 0)
+	if (strcmp(tokens[0], "START") == 0)
 	{
-		if(tokenCount == 2)
+		if (tokenCount == 2)
 		{
-			if(isValidAddress(tokens[1]))
+			tokens[1][strcspn(tokens[1], "\n\r")] = 0;
+			if (isValidAddress(tokens[1]))
 				LC = atoi(tokens[1]);
 			else
 			{
@@ -81,12 +85,12 @@ int pass1(int argc, char *argv[])
 			}
 		}
 	}
-	else	
+	else
 	{
 		printf("First statement should be START.");
 		return 0;
-	}	
-	rewind(fp);
+	}
+	//rewind(fp);
 
 	while (fgets(line, 80, fp) != NULL)
 	{
@@ -101,13 +105,20 @@ int pass1(int argc, char *argv[])
 
 		switch (tokenCount)
 		{
-		case 1: if(valOneToken(tokens, valConc) == false)
-					{
-						printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[0], line);
-						errors++;
-					}
-					
-					break;
+		case 1:
+			if (valOneToken(tokens, valConc) == false)
+			{
+				printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[0], line);
+				errors++;
+			}
+			else
+			{
+				if (strcmp(tokens[0], "LTORG") == 0)
+					giveAddToLit();
+			}
+
+			clearStrArr(valConc);
+			break;
 		case 2:
 			if (valTwoTokens(tokens, valConc) == false)
 			{
@@ -115,16 +126,14 @@ int pass1(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;errors++;
+					tokenCount++;
+					errors++;
 				}
 			}
 			else
-			{
-				if(isValidLabel(tokens[0]))
-				{
-						 
-				}
-			} 
+				createds(tokens, 1);
+			clearStrArr(valConc);
+
 			break;
 		case 3:
 
@@ -134,9 +143,13 @@ int pass1(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;errors++;
+					tokenCount++;
+					errors++;
 				}
 			}
+			else
+				createds(tokens, 2);
+			clearStrArr(valConc);
 			break;
 		case 4:
 			if (valFourTokens(tokens, valConc) == false)
@@ -145,9 +158,12 @@ int pass1(int argc, char *argv[])
 				while (valConc[tokenCount] != NULL)
 				{
 					printf("\n%s:%d %s\n\t>'%s'\n", argv[1], lineNo, valConc[tokenCount], line);
-					tokenCount++;errors++;
+					tokenCount++;
+					errors++;
 				}
 			}
+			else
+				createds(tokens, 3);
 
 			clearStrArr(valConc);
 			break;
@@ -158,17 +174,17 @@ int pass1(int argc, char *argv[])
 		}
 
 		lineNo++;
+		LC++;
 	}
 
-	if(errors == 0)
+	if (errors == 0)
 	{
 		printf("\033[0;32m");
 		printf("\n\t*****");
 		printf("\033[0;32m");
 		printf(" CODE VALIDATED ");
 		printf("\033[0;32m");
-		printf("*****\n\n\n");
-
+		printf("*****\n\n\n\033[0;30m");
 	}
 
 	return 0;
@@ -247,9 +263,9 @@ void clearStrArr(char *ptr[])
 bool isNumber(char *str)
 {
 	int i;
-	for(i = 0; str[i] != '\0'; i++)
+	for (i = 0; str[i] != '\0'; i++)
 	{
-		if(!isdigit(str[i]))
+		if (!isdigit(str[i]))
 			return false;
 	}
 	return true;
@@ -259,14 +275,14 @@ bool isNumber(char *str)
 bool isValidAddress(char *add)
 {
 	int i = 0;
-	while(add[i] != '\0')
-	{	
-		if(!isdigit(add[i]))
+	while (add[i] != '\0')
+	{
+		if (!isdigit(add[i]))
 			return false;
 		i++;
-	}		
+	}
 
-	if(strlen(add) > 3)
+	if (strlen(add) > 3)
 		return false;
 
 	return true;
@@ -283,6 +299,59 @@ bool isValidLabel(char *str)
 	}
 
 	return true;
+}
+
+// function to check if a str is valid literal
+bool isValidLiteral(char *str)
+{
+	int i = 0;
+	if (str[0] == '=')
+	{
+		if (str[1] == '\'')
+		{
+			for (i = 2; str[i] != '\0' || str[i] != '\''; i++)
+			{
+				if (!isdigit(str[i]))
+					return false;
+			}
+		}
+		else
+			return false;
+	}
+	else
+		return false;
+
+	return true;
+}
+
+// function to create appropicate data structuer
+void createds(char *tokens[], int last)
+{
+	//tokens[l][strcspn(tokens[l], "\n\r")] = 0;
+	if (isValidLabel(tokens[0]))
+	{
+		temp_ptr = getSymbolAdd(tokens[0]);
+		if (temp_ptr == NULL)
+			addToSymTab(tokens[0], LC, 1, 0);
+		else if (temp_ptr->used == 1)
+			temp_ptr->address = LC;
+		else
+			temp_ptr->defined += 1;
+	}
+
+	if (isValidLabel(tokens[last]))
+	{
+		if (isValidLiteral(tokens[last]) && !isPresentInPool(tokens[last]))
+			addToLitTab(tokens[last]);
+		else
+		{
+			temp_ptr = getSymbolAdd(tokens[last]);
+			if (temp_ptr == NULL)
+				addToSymTab(tokens[last], -1, 0, 1);
+			else
+				temp_ptr->used += 1;
+		}
+	}
 }
 
 // function to check for validity of line with 4 tokens
@@ -320,26 +389,26 @@ bool valThreeTokens(char *tokens[], char *valConc[])
 	{
 		valTwoOperandMnem(tokens, valConc);
 	}
-	else 
+	else
 	{
 		// validation for label
 		valLabel(tokens, valConc);
 
 		// <label> DS/DC <constant>
-		if(strcmp(tokens[1], "DS" ) == 0 || strcmp(tokens[1], "DC") == 0)
+		if (strcmp(tokens[1], "DS") == 0 || strcmp(tokens[1], "DC") == 0)
 		{
-			if(strstr(tokens[2], "\""))
-				strcpy(tokens[2],removeChar(tokens[2], "\""));
-			else if(strstr(tokens[2], "'"))
+			if (strstr(tokens[2], "\""))
+				strcpy(tokens[2], removeChar(tokens[2], "\""));
+			else if (strstr(tokens[2], "'"))
 				strcpy(tokens[2], removeChar(tokens[2], "'"));
 
-			if(!isValidAddress(tokens[2]))
+			if (!isValidAddress(tokens[2]))
 			{
 				strcpy(valConc[temp], "error: Invalid memory size value, '");
 				strcat(valConc[temp], tokens[2]);
 				strcat(valConc[temp], "'\nnote: check if you have entered correct memory blocks value.");
 				valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-			}	
+			}
 		}
 		else
 			valOneOperandMnem(tokens, valConc); // for  <label> <mnemonic instruction> <memory operand>
@@ -360,11 +429,12 @@ bool valTwoTokens(char *tokens[], char *valConc[])
 	char *arr[] = {"START", "READ", "PRINT", NULL}, tempStr[300];
 	temp = 0;
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-	if(isStrInArr(tokens[0], arr))
+	if (isStrInArr(tokens[0], arr))
 		valOneOperandMnem(tokens, valConc);
-	
+
 	else
-	{ 	valLabel(tokens, valConc);
+	{
+		valLabel(tokens, valConc);
 
 		valNoOperandMnem(tokens, valConc);
 	}
@@ -384,7 +454,7 @@ bool valOneToken(char *tokens[], char *valConc[])
 {
 	temp = 0;
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
- 	tokens[1] = (char *)malloc(sizeof(char)*5);
+	tokens[1] = (char *)malloc(sizeof(char) * 5);
 	tokens[1] = NULL;
 	valNoOperandMnem(tokens, valConc);
 	valConc[temp] = NULL;
@@ -392,7 +462,6 @@ bool valOneToken(char *tokens[], char *valConc[])
 		return false;
 	else
 		return true;
-
 }
 // function to validate operation with 2 operands
 void valTwoOperandMnem(char *tokens[], char *valConc[])
@@ -411,9 +480,8 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
 
-	
 	// checking for operand 1
-	if ((strcmp(tokens[mindex], "BC") == 0) && (!(isStrInArr(tokens[mindex + 1], cc)) || !(isValidLabel(tokens[mindex+2]))))
+	if ((strcmp(tokens[mindex], "BC") == 0) && (!(isStrInArr(tokens[mindex + 1], cc)) || !(isValidLabel(tokens[mindex + 2]))))
 	{
 		strcpy(valConc[temp], "error: Invalid operands of BC statements, ");
 		strcat(valConc[temp], "\nnote: check you have enter correct condition code & memory label.");
@@ -481,10 +549,10 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	// validity of oprand 1
 	tokens[mindex + 1][strcspn(tokens[mindex + 1], "\n")] = 0;
 	char **arr1[] = {mnem, ad, ds, registers, cc};
-	
-	if(strcmp(tokens[mindex], "START") == 0)
+
+	if (strcmp(tokens[mindex], "START") == 0)
 	{
-		if(!isValidAddress(tokens[mindex+1]))
+		if (!isValidAddress(tokens[mindex + 1]))
 		{
 			strcpy(tempStr, "\nnote: check address field in START.");
 			flag = 1;
@@ -494,36 +562,35 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	{
 		for (int i = 0; i < 5; i++)
 		{
-	
+
 			if (isStrInArr(tokens[mindex + 1], arr1[i]))
 			{
 				flag = 1;
 				strcat(tempStr, "\b'\nnote: Check operand 1, it can't be reserve word.");
 				break;
 			}
-		}	
+		}
 	}
 
-	if(flag)
-	{ 
+	if (flag)
+	{
 		strcpy(valConc[temp], "error: Invalid symbolic name, '");
 		strcat(valConc[temp], tokens[mindex + 1]);
 		strcat(valConc[temp], tempStr);
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-
 	}
 }
 
 // function to validate operations with no operands
 void valNoOperandMnem(char *tokens[], char *valConc[])
 {
-	char *arr[] = {"STOP", "END", "LTORG", NULL};	
+	char *arr[] = {"STOP", "END", "LTORG", NULL};
 	int mindex = 1;
-	if(tokens[1] == NULL)
+	if (tokens[1] == NULL)
 		mindex = 0;
-	if(!isStrInArr(tokens[mindex], arr))
+	if (!isStrInArr(tokens[mindex], arr))
 	{
-		strcpy(valConc[temp], "error: Invalid Mnemonic Instruction, '"); 
+		strcpy(valConc[temp], "error: Invalid Mnemonic Instruction, '");
 		strcat(valConc[temp], tokens[mindex]);
 		strcat(valConc[temp], "'\nnote: Check operation mnemonic once.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
