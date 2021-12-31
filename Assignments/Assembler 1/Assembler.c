@@ -90,7 +90,6 @@ int pass1(int argc, char *argv[])
 		printf("First statement should be START.");
 		return 0;
 	}
-	//rewind(fp);
 
 	while (fgets(line, 80, fp) != NULL)
 	{
@@ -114,7 +113,9 @@ int pass1(int argc, char *argv[])
 			else
 			{
 				if (strcmp(tokens[0], "LTORG") == 0)
-					giveAddToLit();
+				{
+					giveAddToLits();
+				}
 			}
 
 			clearStrArr(valConc);
@@ -294,64 +295,11 @@ bool isValidLabel(char *str)
 	// checking for label validity
 	for (int i = 0; i < 5; i++)
 	{
-		if (isStrInArr(str, arrs[i]) || !isalpha(str[0]))
+		if (isStrInArr(str, arrs[i]))
 			return false;
 	}
 
 	return true;
-}
-
-// function to check if a str is valid literal
-bool isValidLiteral(char *str)
-{
-	int i = 0;
-	if (str[0] == '=')
-	{
-		if (str[1] == '\'')
-		{
-			for (i = 2; str[i] != '\0' || str[i] != '\''; i++)
-			{
-				if (!isdigit(str[i]))
-					return false;
-			}
-		}
-		else
-			return false;
-	}
-	else
-		return false;
-
-	return true;
-}
-
-// function to create appropicate data structuer
-void createds(char *tokens[], int last)
-{
-	//tokens[l][strcspn(tokens[l], "\n\r")] = 0;
-	if (isValidLabel(tokens[0]))
-	{
-		temp_ptr = getSymbolAdd(tokens[0]);
-		if (temp_ptr == NULL)
-			addToSymTab(tokens[0], LC, 1, 0);
-		else if (temp_ptr->used == 1)
-			temp_ptr->address = LC;
-		else
-			temp_ptr->defined += 1;
-	}
-
-	if (isValidLabel(tokens[last]))
-	{
-		if (isValidLiteral(tokens[last]) && !isPresentInPool(tokens[last]))
-			addToLitTab(tokens[last]);
-		else
-		{
-			temp_ptr = getSymbolAdd(tokens[last]);
-			if (temp_ptr == NULL)
-				addToSymTab(tokens[last], -1, 0, 1);
-			else
-				temp_ptr->used += 1;
-		}
-	}
 }
 
 // function to check for validity of line with 4 tokens
@@ -562,7 +510,6 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	{
 		for (int i = 0; i < 5; i++)
 		{
-
 			if (isStrInArr(tokens[mindex + 1], arr1[i]))
 			{
 				flag = 1;
@@ -594,5 +541,64 @@ void valNoOperandMnem(char *tokens[], char *valConc[])
 		strcat(valConc[temp], tokens[mindex]);
 		strcat(valConc[temp], "'\nnote: Check operation mnemonic once.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
+	}
+}
+
+// function to check if a str is valid literal
+bool isValidLiteral(char *str)
+{
+	int i = 0;
+	if (str[0] == '=' && str[1] == '\'')
+	{
+			for (i = 2; str[i] != '\0' && str[i] != '\''; i++)
+			{
+				if (!isdigit(str[i]))
+					return false;
+			}
+	}
+	else
+		return false;
+
+	return true;
+}
+
+// function to create appropicate data structuer
+void createds(char *tokens[], int last)
+{
+	if (isValidLabel(tokens[0]))
+	{
+		temp_ptr = getSymbolAdd(tokens[0]);
+		if (temp_ptr == NULL)
+			addToSymTab(tokens[0], LC, 1, 0);
+		else if (temp_ptr->used == 1)
+			temp_ptr->address = LC;
+		else
+			temp_ptr->defined += 1;
+	}
+
+	if (isValidLabel(tokens[last]))
+	{
+		
+		if (isValidLiteral(tokens[last]))
+		{
+			
+			if (!isPresentInPool(tokens[last]))
+				addToLitTab(tokens[last]);
+		}
+		else if (last == 2 && isStrInArr(tokens[1], ds))
+		{
+			temp_ptr = getSymbolAdd(tokens[0]);
+
+			temp_ptr->value = atoi(tokens[2]);
+		}
+		else
+		{
+			printf("%s", tokens[last]);
+			temp_ptr = getSymbolAdd(tokens[last]);
+			if (temp_ptr == NULL)
+				addToSymTab(tokens[last], -1, 0, 1);
+			else
+				temp_ptr->used += 1;
+		}
 	}
 }
