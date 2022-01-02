@@ -4,19 +4,14 @@
 #include <string.h>
 #include <ctype.h>
 #include "dataStructure.h"
+#include "globel_arrs.h"
+#include "utilityFunc.h"
+#include "ic_code.h"
 
 #define VAL_CONC_LENGTH 300
 
 // UTILITY FUNCTIONS
 int pass1(int argc, char *argv[]);
-int tokenizer(char *, char *[]);
-char *removeChar(char *, char *);
-bool isStrInArr(char *, char *[]);
-void clearStrArr(char *[]);
-bool isNumber(char *);
-bool isValidAddress(char *);
-bool isValidLabel(char *);
-bool isValidLiteral(char *);
 void createds(char *[], int);
 
 // VALIDITY FUNCTION
@@ -32,12 +27,7 @@ void valNoOperandMnem(char *[], char *[]);
 // GLOBAL VARAIBLES
 int temp = 0, errors = 0;
 
-// GLOBAL KAYWORDS ARRAYS
-char *mnem[] = {"STOP", "ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", "READ", "PRINT", NULL};
-char *registers[] = {"AREG", "BREG", "CREG", "DREG", NULL};
-char *cc[] = {"LT", "LE", "EQ", "GT", "GE", "ANY", NULL};
-char *ad[] = {"START", "END", "ORIGIN", "EQU", "LTORG", NULL};
-char *ds[] = {"DS", "DC", NULL};
+
 //char *numbers[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", NULL};
 //char *punctuations[] = {"!", "#", "$", "%", "&", "(", ")", "*", "+", ",", "-", ".", "/", ":", ";", "<", "=", ">", "?", "@", "[", "]", "^", "_", "{", "|", "~", "}", NULL};
 
@@ -46,12 +36,13 @@ int main(int argc, char *argv[])
 	pass1(argc, argv);
 	printSymTab();
 	printLitTab();
+	printSymTabError();
 	return 0;
 }
 
 int pass1(int argc, char *argv[])
 {
-	FILE *fp = NULL;
+	FILE *fp = NULL, *ic_fp=NULL;
 	char *line, *tokens[5], *valConc[10];
 	int tokenCount, lineNo = 1;
 
@@ -112,7 +103,7 @@ int pass1(int argc, char *argv[])
 			}
 			else
 			{
-				if (strcmp(tokens[0], "LTORG") == 0)
+				if (strcmp(tokens[0], "LTORG") == 0 || strcmp(tokens[0], "END") == 0)
 				{
 					giveAddToLits();
 				}
@@ -132,7 +123,11 @@ int pass1(int argc, char *argv[])
 				}
 			}
 			else
+			{
 				createds(tokens, 1);
+				if (strcmp(tokens[1], "LTORG") == 0 || strcmp(tokens[1], "END") == 0)
+					giveAddToLits();
+			}
 			clearStrArr(valConc);
 
 			break;
@@ -149,7 +144,10 @@ int pass1(int argc, char *argv[])
 				}
 			}
 			else
+			{
 				createds(tokens, 2);
+
+			}
 			clearStrArr(valConc);
 			break;
 		case 4:
@@ -164,7 +162,9 @@ int pass1(int argc, char *argv[])
 				}
 			}
 			else
+			{
 				createds(tokens, 3);
+			}
 
 			clearStrArr(valConc);
 			break;
@@ -180,126 +180,59 @@ int pass1(int argc, char *argv[])
 
 	if (errors == 0)
 	{
-		printf("\033[0;32m");
-		printf("\n\t*****");
-		printf("\033[0;32m");
-		printf(" CODE VALIDATED ");
-		printf("\033[0;32m");
-		printf("*****\n\n\n\033[0;30m");
-	}
+		rewind(fp);
+		ic_fp = fopen("IC_Code.txt", "w+"); 
+		fgets(line, 80, fp);
+		line[strcspn(line, "\n\r")] = 0;
+		tokenCount = tokenizer(line, tokens);
+		(tokenCount == 2) ? fprintf(ic_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_fp, "<AD ,1>\n");
+		while (fgets(line, 80, fp) != NULL)
+		{
+			line[strcspn(line, "\n\r")] = 0;
 
+			if (strstr(line, ",") != NULL)
+			{
+				line = removeChar(line, ",");
+				tokenCount = tokenizer(line, tokens);
+			}
+			tokenCount = tokenizer(line, tokens);
+
+			switch (tokenCount)
+			{
+			
+			case 1:
+				line = createIcCodeVar1(tokens[0], NULL, NULL);
+				break;
+
+			case 2:
+				if(isValidLabel(tokens[0]))
+					line = createIcCodeVar1(tokens[1], NULL, NULL);
+				else
+					line = createIcCodeVar1(tokens[0], tokens[1], NULL);
+				break;
+			
+			case 3:
+				if (isStrInArr(tokens[1], ds) != -1)
+					line = createIcCodeVar1(tokens[1], tokens[0], NULL);
+				else if (isValidLabel(tokens[0]) )
+					line = createIcCodeVar1(tokens[1], tokens[2], NULL);
+				else
+					line = createIcCodeVar1(tokens[0], tokens[1], tokens[2]);
+				break;
+			case 4:
+				line = createIcCodeVar1(tokens[1], tokens[2], tokens[3]);
+			break;
+			default:
+				break;
+			}
+
+			fprintf(ic_fp, "%s\n", line);
+		}
+	
+	}
+	fclose(fp);
+	fclose(ic_fp);
 	return 0;
-}
-
-// function to tokenize a source program line
-// returns tokens count in a line & tokens in tokens array
-int tokenizer(char *line, char *tokens[5])
-{
-	char str[80], *token;
-	int tokenCount = 0;
-	strcpy(str, line);
-	token = strtok(str, " ");
-
-	while (token != NULL)
-	{
-		tokens[tokenCount] = (char *)malloc(sizeof(char) * 80);
-		strcpy(tokens[tokenCount], token);
-		token = strtok(NULL, " ");
-		tokenCount++;
-	}
-	return tokenCount;
-}
-
-// function to remove all ouccurance of char in a string
-// parameters :
-//     line : String
-//     ch   : single char string to remove
-char *removeChar(char *line, char *ch)
-{
-	char *token, str[80];
-	strcpy(str, line);
-	token = strtok(str, ch);
-	strcpy(line, "");
-
-	while (token != NULL)
-	{
-		line = strcat(line, token);
-		token = strtok(NULL, ch);
-	}
-	return line;
-}
-
-// function to check if a string is present in array of strings
-// parameters:
-//     str: string to search for
-//     arr: array of strings in which to search for str string
-// returns 1 if found else 0
-bool isStrInArr(char *str, char *arr[])
-{
-	for (int i = 0; arr[i] != NULL; i++)
-	{
-		if (strcmp(str, arr[i]) == 0)
-			return true;
-	}
-
-	return false;
-}
-
-// function to free a block of memory allocated for a string array
-// ****NOTE: Array's last entry should be NULL, (to indicate end of array)
-// parameter:
-//    *ptr : pointer to array of string which is to be free
-
-void clearStrArr(char *ptr[])
-{
-	int i = 0;
-	while (ptr[i] != NULL)
-	{
-		free(ptr[i]);
-		i++;
-	}
-}
-
-// function to create a  string is a number
-bool isNumber(char *str)
-{
-	int i;
-	for (i = 0; str[i] != '\0'; i++)
-	{
-		if (!isdigit(str[i]))
-			return false;
-	}
-	return true;
-}
-
-// function to check if address is valid or not
-bool isValidAddress(char *add)
-{
-	int i = 0;
-	while (add[i] != '\0')
-	{
-		if (!isdigit(add[i]))
-			return false;
-		i++;
-	}
-
-	if (strlen(add) > 3)
-		return false;
-
-	return true;
-}
-// function to check if a str is valid label
-bool isValidLabel(char *str)
-{
-	char **arrs[5] = {mnem, registers, ad, ds, cc};
-	// checking for label validity
-	for (int i = 0; i < 5; i++)
-	{
-		if (isStrInArr(str, arrs[i]))
-			return false;
-	}
-
-	return true;
 }
 
 // function to check for validity of line with 4 tokens
@@ -333,7 +266,7 @@ bool valThreeTokens(char *tokens[], char *valConc[])
 	temp = 0; // global variable
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 
-	if (isStrInArr(tokens[0], allowedMnem))
+	if (isStrInArr(tokens[0], allowedMnem) != -1)
 	{
 		valTwoOperandMnem(tokens, valConc);
 	}
@@ -377,7 +310,7 @@ bool valTwoTokens(char *tokens[], char *valConc[])
 	char *arr[] = {"START", "READ", "PRINT", NULL}, tempStr[300];
 	temp = 0;
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-	if (isStrInArr(tokens[0], arr))
+	if (isStrInArr(tokens[0], arr) != -1)
 		valOneOperandMnem(tokens, valConc);
 
 	else
@@ -416,11 +349,11 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 {
 	char *tempArr[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
 	int mindex = 0;
-	if (!isStrInArr(tokens[0], tempArr))
+	if (isStrInArr(tokens[0], tempArr) == -1)
 		mindex += 1;
 
 	// checking for mnemonic validation
-	if (!isStrInArr(tokens[mindex], tempArr))
+	if (isStrInArr(tokens[mindex], tempArr) == -1)
 	{
 		strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
 		strcat(valConc[temp], tokens[mindex]);
@@ -429,13 +362,13 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 	}
 
 	// checking for operand 1
-	if ((strcmp(tokens[mindex], "BC") == 0) && (!(isStrInArr(tokens[mindex + 1], cc)) || !(isValidLabel(tokens[mindex + 2]))))
+	if ((strcmp(tokens[mindex], "BC") == 0) && ((isStrInArr(tokens[mindex + 1], cc) == -1) || !(isValidLabel(tokens[mindex + 2]))))
 	{
 		strcpy(valConc[temp], "error: Invalid operands of BC statements, ");
 		strcat(valConc[temp], "\nnote: check you have enter correct condition code & memory label.");
 		valConc[++temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	}
-	else if (!isStrInArr(tokens[mindex + 1], registers))
+	else if (isStrInArr(tokens[mindex + 1], registers) == -1)
 	{
 		strcpy(valConc[temp], "error: Invalid register operand, '");
 		strcat(valConc[temp], tokens[mindex + 1]);
@@ -449,8 +382,7 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 
 	for (int i = 0; i < 4; i++)
 	{
-
-		if (isStrInArr(tokens[mindex + 2], arr[i]))
+		if (isStrInArr(tokens[mindex + 2], arr[i]) != -1)
 		{
 			strcpy(valConc[temp], "error: Invalid symbolic name, '");
 			strcat(valConc[temp], tokens[mindex + 2]);
@@ -468,7 +400,7 @@ void valLabel(char *tokens[], char *valConc[])
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
 	for (int i = 0; i < 5; i++)
 	{
-		if (isStrInArr(tokens[0], arrs[i]) || !isalpha(tokens[0][0]))
+		if (isStrInArr(tokens[0], arrs[i]) != -1)
 		{
 			strcpy(valConc[temp], "error: Invalid symbolic name, '");
 			strcat(valConc[temp], tokens[0]);
@@ -483,10 +415,10 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 {
 	char *arr[] = {"START", "READ", "PRINT", NULL}, tempStr[300];
 	int mindex = 0, flag = 0;
-	if (!isStrInArr(tokens[0], arr))
+	if (isStrInArr(tokens[0], arr) == -1)
 		mindex += 1;
 	// validity of mnemonics
-	if (!isStrInArr(tokens[mindex], arr))
+	if (isStrInArr(tokens[mindex], arr) == -1)
 	{
 		strcpy(valConc[temp], "error: Invalid Mnemonic instruction, '");
 		strcat(valConc[temp], tokens[mindex]);
@@ -510,7 +442,7 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	{
 		for (int i = 0; i < 5; i++)
 		{
-			if (isStrInArr(tokens[mindex + 1], arr1[i]))
+			if (isStrInArr(tokens[mindex + 1], arr1[i]) != -1)
 			{
 				flag = 1;
 				strcat(tempStr, "\b'\nnote: Check operand 1, it can't be reserve word.");
@@ -535,7 +467,7 @@ void valNoOperandMnem(char *tokens[], char *valConc[])
 	int mindex = 1;
 	if (tokens[1] == NULL)
 		mindex = 0;
-	if (!isStrInArr(tokens[mindex], arr))
+	if (isStrInArr(tokens[mindex], arr) == -1)
 	{
 		strcpy(valConc[temp], "error: Invalid Mnemonic Instruction, '");
 		strcat(valConc[temp], tokens[mindex]);
@@ -544,23 +476,6 @@ void valNoOperandMnem(char *tokens[], char *valConc[])
 	}
 }
 
-// function to check if a str is valid literal
-bool isValidLiteral(char *str)
-{
-	int i = 0;
-	if (str[0] == '=' && str[1] == '\'')
-	{
-			for (i = 2; str[i] != '\0' && str[i] != '\''; i++)
-			{
-				if (!isdigit(str[i]))
-					return false;
-			}
-	}
-	else
-		return false;
-
-	return true;
-}
 
 // function to create appropicate data structuer
 void createds(char *tokens[], int last)
@@ -578,27 +493,25 @@ void createds(char *tokens[], int last)
 
 	if (isValidLabel(tokens[last]))
 	{
-		
+
 		if (isValidLiteral(tokens[last]))
 		{
-			
 			if (!isPresentInPool(tokens[last]))
 				addToLitTab(tokens[last]);
 		}
-		else if (last == 2 && isStrInArr(tokens[1], ds))
+		else if (last == 2 && isStrInArr(tokens[1], ds) != -1)
 		{
 			temp_ptr = getSymbolAdd(tokens[0]);
-
 			temp_ptr->value = atoi(tokens[2]);
+			temp_ptr->defined = 1;
 		}
 		else
 		{
-			printf("%s", tokens[last]);
 			temp_ptr = getSymbolAdd(tokens[last]);
 			if (temp_ptr == NULL)
 				addToSymTab(tokens[last], -1, 0, 1);
 			else
-				temp_ptr->used += 1;
+				temp_ptr->used = 1;
 		}
 	}
 }

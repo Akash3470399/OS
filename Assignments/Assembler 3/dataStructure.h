@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#ifndef DATASTRUCTURE_H
 
-    struct SymTab
+struct SymTab
 {
     int no, address, defined, used, value;
     char *symbol;
@@ -23,7 +24,10 @@ struct PoolTab
 
 int LC = 0, symNo = 1, litNo = 1, isFirstLitInPass = 0;
 
-// Symbol table 
+
+// **************  Symbol table  ************** 
+
+// 
 struct SymTab *newSymbolNode(char *symbol,int address, int defined, int used)
 {
     struct SymTab *st = (struct SymTab *)malloc(sizeof(struct SymTab));
@@ -68,6 +72,22 @@ void printSymTab()
     printf("\nSymbol Table\n");
     for(struct SymTab *i = s_start; i != NULL; i = i->next)
         printf("%d : %s\t%d\t%d\t%d\t%d\n", i->no, i->symbol, i->address, i->defined, i->used, i->value);
+}
+
+void printSymTabError()
+{
+    struct SymTab *i;
+
+    for(i = s_start; i != NULL; i = i->next)
+    {
+        if(i->defined > 1)
+            printf("ERROR : Re-declaration of symbol %s\n", i->symbol);
+        if(i->defined == 0 && i->used == 1)
+            printf("ERROR : Symbol %s is used but not defined. \n", i->symbol);
+        if(i->defined == 1 && i->used == 0)
+            printf("WARNING : %s defined but not used.\n", i->symbol);
+
+    }
 }
 
 // Literal table
@@ -128,6 +148,16 @@ void printLitTab()
         printf("%d : %s\t%d\t\n",i->no, i->literal, i->address);
 }
 
+struct LitTab *getLitAdd(char *lit)
+{
+    struct LitTab *i;
+    for(i = l_start; i != NULL; i = i->next)
+    {
+        if (strcmp(i->literal, lit) == 0)
+            return i;
+    }
+    return NULL;
+}
 // Pool table
 int isPresentInPool(char *lit)
 {
@@ -153,3 +183,5 @@ void giveAddToLits()
         isFirstLitInPass = 1;
     }
 }
+
+#endif

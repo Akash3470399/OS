@@ -8,6 +8,8 @@ READ ='1'
 READ ='10'
 READ ='5'
 READ ='5'
+MOVER AREG jl
+MOVEM CREG x
 A END
 C DC '5'
 x DS '8'
