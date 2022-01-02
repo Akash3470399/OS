@@ -4,3 +4,5 @@
 *.exe
 *.out
 *.gitignore~
+IC_Code.txt
+.vscode
