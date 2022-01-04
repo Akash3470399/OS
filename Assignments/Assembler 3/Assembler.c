@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
 int pass1(int argc, char *argv[])
 {
-	FILE *fp = NULL, *ic_fp=NULL;
+	FILE *fp = NULL, *ic_v_1_fp=NULL, *ic_v_2_fp = NULL;
 	char *line, *tokens[5], *valConc[10];
 	int tokenCount, lineNo = 1;
 
@@ -181,11 +181,13 @@ int pass1(int argc, char *argv[])
 	if (errors == 0)
 	{
 		rewind(fp);
-		ic_fp = fopen("IC_Code.txt", "w+"); 
+		ic_v_1_fp = fopen("IC_Code_var1.txt", "w+"); 
+		ic_v_2_fp = fopen("IC_Code_var2.txt", "w+"); 
 		fgets(line, 80, fp);
 		line[strcspn(line, "\n\r")] = 0;
 		tokenCount = tokenizer(line, tokens);
-		(tokenCount == 2) ? fprintf(ic_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_fp, "<AD ,1>\n");
+		(tokenCount == 2) ? fprintf(ic_v_1_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_1_fp, "<AD ,1>\n");
+		(tokenCount == 2) ? fprintf(ic_v_2_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_2_fp, "<AD ,1>\n");
 		while (fgets(line, 80, fp) != NULL)
 		{
 			line[strcspn(line, "\n\r")] = 0;
@@ -225,13 +227,44 @@ int pass1(int argc, char *argv[])
 			default:
 				break;
 			}
+			fprintf(ic_v_1_fp, "%s\n", line);
 
-			fprintf(ic_fp, "%s\n", line);
+			switch (tokenCount)
+			{
+			
+			case 1:
+				line = createIcCodeVar2(tokens[0], NULL, NULL);
+				break;
+
+			case 2:
+				if(isValidLabel(tokens[0]))
+					line = createIcCodeVar2(tokens[1], NULL, NULL);
+				else
+					line = createIcCodeVar2(tokens[0], tokens[1], NULL);
+				break;
+			
+			case 3:
+				if (isStrInArr(tokens[1], ds) != -1)
+					line = createIcCodeVar2(tokens[1], tokens[0], NULL);
+				else if (isValidLabel(tokens[0]) )
+					line = createIcCodeVar2(tokens[1], tokens[2], NULL);
+				else
+					line = createIcCodeVar2(tokens[0], tokens[1], tokens[2]);
+				break;
+			case 4:
+				line = createIcCodeVar2(tokens[1], tokens[2], tokens[3]);
+			break;
+			default:
+				break;
+			}
+
+			fprintf(ic_v_2_fp, "%s\n", line);
 		}
 	
 	}
 	fclose(fp);
-	fclose(ic_fp);
+	fclose(ic_v_1_fp);
+	fclose(ic_v_2_fp);
 	return 0;
 }
 
