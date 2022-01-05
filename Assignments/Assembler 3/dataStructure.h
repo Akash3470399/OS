@@ -44,7 +44,8 @@ struct SymTab *newSymbolNode(char *symbol, int address, int defined, int used)
 
 struct SymTab *getSymbolAdd(char *str)
 {
-    for (struct SymTab *i = s_start; i != NULL; i = i->next)
+    struct SymTab *i;
+    for (i = s_start; i != NULL; i = i->next)
     {
         if (strcmp(i->symbol, str) == 0)
             return i;
@@ -148,8 +149,9 @@ void addToLitTab(char *literal)
 
 void printLitTab()
 {
+    struct LitTab *i;
     printf("\n\t\tLiteral Table\nNo\tLit\tAddress\n");
-    for (struct LitTab *i = l_start; i != NULL; i = i->next)
+    for (i = l_start; i != NULL; i = i->next)
         printf("%d\t%s\t%d\t\n", i->no, i->literal, i->address);
 }
 

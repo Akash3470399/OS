@@ -184,8 +184,8 @@ int pass1(int argc, char *argv[])
 			printSymTab();
 		}
 		if (l_start != NULL)
-		  			printLitTab();
-		if(tokenCount == 0)
+			printLitTab();
+		if (tokenCount == 0)
 			create_ic_code(tokens, fp); //function create IC code & store it in files.
 	}
 
@@ -305,7 +305,7 @@ bool valOneToken(char *tokens[], char *valConc[])
 void valTwoOperandMnem(char *tokens[], char *valConc[])
 {
 	char *tempArr[] = {"ADD", "SUB", "MULT", "MOVER", "MOVEM", "COMP", "BC", "DIV", NULL};
-	int mindex = 0;
+	int mindex = 0, i;
 	if (isStrInArr(tokens[0], tempArr) == -1)
 		mindex += 1;
 
@@ -337,7 +337,7 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 	tokens[mindex + 2][strcspn(tokens[mindex + 2], "\n")] = 0;
 	char **arr[] = {mnem, ad, ds, registers};
 
-	for (int i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++)
 	{
 		if (isStrInArr(tokens[mindex + 2], arr[i]) != -1)
 		{
@@ -353,9 +353,10 @@ void valTwoOperandMnem(char *tokens[], char *valConc[])
 void valLabel(char *tokens[], char *valConc[])
 {
 	char **arrs[5] = {mnem, registers, ad, ds, cc};
+	int i;
 	// checking for label validity
 	valConc[temp] = (char *)malloc(sizeof(char) * VAL_CONC_LENGTH);
-	for (int i = 0; i < 5; i++)
+	for (i = 0; i < 5; i++)
 	{
 		if (isStrInArr(tokens[0], arrs[i]) != -1)
 		{
@@ -371,7 +372,7 @@ void valLabel(char *tokens[], char *valConc[])
 void valOneOperandMnem(char *tokens[], char *valConc[])
 {
 	char *arr[] = {"START", "READ", "PRINT", NULL}, tempStr[300];
-	int mindex = 0, flag = 0;
+	int mindex = 0, flag = 0, i;
 	if (isStrInArr(tokens[0], arr) == -1)
 		mindex += 1;
 	// validity of mnemonics
@@ -397,7 +398,7 @@ void valOneOperandMnem(char *tokens[], char *valConc[])
 	}
 	else
 	{
-		for (int i = 0; i < 5; i++)
+		for (i = 0; i < 5; i++)
 		{
 			if (isStrInArr(tokens[mindex + 1], arr1[i]) != -1)
 			{
@@ -480,10 +481,12 @@ void createds(char *tokens[], int last)
 void create_ic_code(char *tokens[], FILE *fp)
 {
 	int tokenCount, temp_lc = 0;
-	char *line, *line1;
+	char *line, *line1, f_name[50];
 	rewind(fp);
 	// FILE *ic_v_1_fp = fopen("target_code.txt", "w+");
-	 FILE *tc_fp = fopen("target_code.txt", "w+");
+	printf("Eneter file name to store code ");
+	scanf("%s", f_name);
+	FILE *tc_fp = fopen(f_name, "w+");
 	FILE *ic_v_2_fp = fopen("IC_Code_var2.txt", "w+");
 	line = (char *)malloc(sizeof(char) * 100);
 	line1 = (char *)malloc(sizeof(char) * 100);
@@ -494,8 +497,7 @@ void create_ic_code(char *tokens[], FILE *fp)
 	// (tokenCount == 2) ? fprintf(ic_v_1_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_1_fp, "<AD ,1>\n");
 	(tokenCount == 2) ? fprintf(ic_v_2_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_2_fp, "<AD ,1>\n");
 
-	temp_lc = (tokenCount == 2)?atoi(tokens[1]):0;
-	
+	temp_lc = (tokenCount == 2) ? atoi(tokens[1]) : 0;
 
 	while (fgets(line, 80, fp) != NULL)
 	{
@@ -558,7 +560,6 @@ void create_ic_code(char *tokens[], FILE *fp)
 
 		sprintf(line1, "%d %s", temp_lc++, line);
 		fprintf(tc_fp, "%s\n", line1);
-
 	}
 
 	fclose(tc_fp);
