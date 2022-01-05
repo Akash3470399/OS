@@ -7,12 +7,14 @@
 #include "globel_arrs.h"
 #include "utilityFunc.h"
 #include "ic_code.h"
+#include "target_code.h"
 
 #define VAL_CONC_LENGTH 300
 
 // UTILITY FUNCTIONS
 int pass1(int argc, char *argv[]);
 void createds(char *[], int);
+void create_ic_code(char *[], FILE *);
 
 // VALIDITY FUNCTION
 bool valFourTokens(char *[], char *[]);
@@ -27,22 +29,19 @@ void valNoOperandMnem(char *[], char *[]);
 // GLOBAL VARAIBLES
 int temp = 0, errors = 0;
 
-
 //char *numbers[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", NULL};
 //char *punctuations[] = {"!", "#", "$", "%", "&", "(", ")", "*", "+", ",", "-", ".", "/", ":", ";", "<", "=", ">", "?", "@", "[", "]", "^", "_", "{", "|", "~", "}", NULL};
 
 int main(int argc, char *argv[])
 {
 	pass1(argc, argv);
-	printSymTab();
-	printLitTab();
-	printSymTabError();
+
 	return 0;
 }
 
 int pass1(int argc, char *argv[])
 {
-	FILE *fp = NULL, *ic_v_1_fp=NULL, *ic_v_2_fp = NULL;
+	FILE *fp = NULL, *ic_v_1_fp = NULL, *ic_v_2_fp = NULL;
 	char *line, *tokens[5], *valConc[10];
 	int tokenCount, lineNo = 1;
 
@@ -146,7 +145,6 @@ int pass1(int argc, char *argv[])
 			else
 			{
 				createds(tokens, 2);
-
 			}
 			clearStrArr(valConc);
 			break;
@@ -180,92 +178,18 @@ int pass1(int argc, char *argv[])
 
 	if (errors == 0)
 	{
-		rewind(fp);
-		ic_v_1_fp = fopen("IC_Code_var1.txt", "w+"); 
-		ic_v_2_fp = fopen("IC_Code_var2.txt", "w+"); 
-		fgets(line, 80, fp);
-		line[strcspn(line, "\n\r")] = 0;
-		tokenCount = tokenizer(line, tokens);
-		(tokenCount == 2) ? fprintf(ic_v_1_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_1_fp, "<AD ,1>\n");
-		(tokenCount == 2) ? fprintf(ic_v_2_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_2_fp, "<AD ,1>\n");
-		while (fgets(line, 80, fp) != NULL)
+		if (s_start != NULL)
 		{
-			line[strcspn(line, "\n\r")] = 0;
-
-			if (strstr(line, ",") != NULL)
-			{
-				line = removeChar(line, ",");
-				tokenCount = tokenizer(line, tokens);
-			}
-			tokenCount = tokenizer(line, tokens);
-
-			switch (tokenCount)
-			{
-			
-			case 1:
-				line = createIcCodeVar1(tokens[0], NULL, NULL);
-				break;
-
-			case 2:
-				if(isValidLabel(tokens[0]))
-					line = createIcCodeVar1(tokens[1], NULL, NULL);
-				else
-					line = createIcCodeVar1(tokens[0], tokens[1], NULL);
-				break;
-			
-			case 3:
-				if (isStrInArr(tokens[1], ds) != -1)
-					line = createIcCodeVar1(tokens[1], tokens[0], NULL);
-				else if (isValidLabel(tokens[0]) )
-					line = createIcCodeVar1(tokens[1], tokens[2], NULL);
-				else
-					line = createIcCodeVar1(tokens[0], tokens[1], tokens[2]);
-				break;
-			case 4:
-				line = createIcCodeVar1(tokens[1], tokens[2], tokens[3]);
-			break;
-			default:
-				break;
-			}
-			fprintf(ic_v_1_fp, "%s\n", line);
-
-			switch (tokenCount)
-			{
-			
-			case 1:
-				line = createIcCodeVar2(tokens[0], NULL, NULL);
-				break;
-
-			case 2:
-				if(isValidLabel(tokens[0]))
-					line = createIcCodeVar2(tokens[1], NULL, NULL);
-				else
-					line = createIcCodeVar2(tokens[0], tokens[1], NULL);
-				break;
-			
-			case 3:
-				if (isStrInArr(tokens[1], ds) != -1)
-					line = createIcCodeVar2(tokens[1], tokens[0], NULL);
-				else if (isValidLabel(tokens[0]) )
-					line = createIcCodeVar2(tokens[1], tokens[2], NULL);
-				else
-					line = createIcCodeVar2(tokens[0], tokens[1], tokens[2]);
-				break;
-			case 4:
-				line = createIcCodeVar2(tokens[1], tokens[2], tokens[3]);
-			break;
-			default:
-				break;
-			}
-
-			fprintf(ic_v_2_fp, "%s\n", line);
+			tokenCount = printSymTabError(); // useing tokensCount as temp var to store error count in SymTab
+			printSymTab();
 		}
-	
+		if (l_start != NULL)
+		  			printLitTab();
+		if(tokenCount == 0)
+			create_ic_code(tokens, fp); //function create IC code & store it in files.
 	}
+
 	fclose(fp);
-	fclose(ic_v_1_fp);
-	fclose(ic_v_2_fp);
-	return 0;
 }
 
 // function to check for validity of line with 4 tokens
@@ -509,10 +433,10 @@ void valNoOperandMnem(char *tokens[], char *valConc[])
 	}
 }
 
-
 // function to create appropicate data structuer
 void createds(char *tokens[], int last)
 {
+	int i;
 	if (isValidLabel(tokens[0]))
 	{
 		temp_ptr = getSymbolAdd(tokens[0]);
@@ -536,7 +460,10 @@ void createds(char *tokens[], int last)
 		{
 			temp_ptr = getSymbolAdd(tokens[0]);
 			temp_ptr->value = atoi(tokens[2]);
-			temp_ptr->defined = 1;
+			temp_ptr->defined += 1;
+			if (strcmp(tokens[1], "DS") == 0)
+				for (i = 0; i < temp_ptr->value; i++)
+					LC++;
 		}
 		else
 		{
@@ -547,4 +474,93 @@ void createds(char *tokens[], int last)
 				temp_ptr->used = 1;
 		}
 	}
+}
+
+// Driver function to create IC code
+void create_ic_code(char *tokens[], FILE *fp)
+{
+	int tokenCount, temp_lc = 0;
+	char *line, *line1;
+	rewind(fp);
+	// FILE *ic_v_1_fp = fopen("target_code.txt", "w+");
+	 FILE *tc_fp = fopen("target_code.txt", "w+");
+	FILE *ic_v_2_fp = fopen("IC_Code_var2.txt", "w+");
+	line = (char *)malloc(sizeof(char) * 100);
+	line1 = (char *)malloc(sizeof(char) * 100);
+
+	fgets(line, 80, fp);
+	line[strcspn(line, "\n\r")] = 0;
+	tokenCount = tokenizer(line, tokens);
+	// (tokenCount == 2) ? fprintf(ic_v_1_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_1_fp, "<AD ,1>\n");
+	(tokenCount == 2) ? fprintf(ic_v_2_fp, "<AD ,1> <C, %s>\n", tokens[1]) : fprintf(ic_v_2_fp, "<AD ,1>\n");
+
+	temp_lc = (tokenCount == 2)?atoi(tokens[1]):0;
+	
+
+	while (fgets(line, 80, fp) != NULL)
+	{
+		line[strcspn(line, "\n\r")] = 0;
+
+		if (strstr(line, ",") != NULL)
+		{
+			line = removeChar(line, ",");
+			tokenCount = tokenizer(line, tokens);
+		}
+		tokenCount = tokenizer(line, tokens);
+
+		switch (tokenCount)
+		{
+
+		case 1:
+			line = createIcCodeVar1(tokens[0], NULL, NULL);
+			line1 = createIcCodeVar1(tokens[0], NULL, NULL);
+			break;
+
+		case 2:
+			if (isValidLabel(tokens[0]))
+			{
+				line = createIcCodeVar1(tokens[1], NULL, NULL);
+				line1 = createIcCodeVar2(tokens[1], NULL, NULL);
+			}
+			else
+			{
+				line = createIcCodeVar1(tokens[0], tokens[1], NULL);
+				line1 = createIcCodeVar2(tokens[0], tokens[1], NULL);
+			}
+			break;
+
+		case 3:
+			if (isStrInArr(tokens[1], ds) != -1)
+			{
+				line = createIcCodeVar1(tokens[1], tokens[0], NULL);
+				line1 = createIcCodeVar2(tokens[1], tokens[0], NULL);
+			}
+			else if (isValidLabel(tokens[0]))
+			{
+				line = createIcCodeVar1(tokens[1], tokens[2], NULL);
+				line1 = createIcCodeVar2(tokens[1], tokens[2], NULL);
+			}
+			else
+			{
+				line = createIcCodeVar1(tokens[0], tokens[1], tokens[2]);
+				line1 = createIcCodeVar2(tokens[0], tokens[1], tokens[2]);
+			}
+			break;
+		case 4:
+			line = createIcCodeVar1(tokens[1], tokens[2], tokens[3]);
+			line1 = createIcCodeVar2(tokens[1], tokens[2], tokens[3]);
+			break;
+		default:
+			break;
+		}
+
+		fprintf(ic_v_2_fp, "%s\n", line1);
+
+		sprintf(line1, "%d %s", temp_lc++, line);
+		fprintf(tc_fp, "%s\n", line1);
+
+	}
+
+	fclose(tc_fp);
+	fclose(ic_v_2_fp);
 }

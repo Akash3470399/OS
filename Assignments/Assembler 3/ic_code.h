@@ -12,6 +12,8 @@ char  *createIcCodeVar1(char *mn, char *op1, char *op2)
 {
     int i = 0, index = -1, is_data = 0;
     char *code = (char *)malloc(sizeof(char)*30), temp[10];
+    char *t_code = (char *)malloc(sizeof(char) * 30);
+
     struct LitTab *l_temp;
     struct SymTab *s_temp;
 
@@ -19,6 +21,10 @@ char  *createIcCodeVar1(char *mn, char *op1, char *op2)
     {
         index = isStrInArr(mn, mnem);
         sprintf(code, "<IS, %d> ", index);
+        sprintf(temp, "%d", index);
+        if (strlen(temp) < 2)
+            strcat(t_code, "0");        
+        strcat(t_code, temp);
     } 
     else if (isStrInArr(mn, ad) != -1) // checking for assembler directive
     {
@@ -29,6 +35,10 @@ char  *createIcCodeVar1(char *mn, char *op1, char *op2)
     {
         index = isStrInArr(mn, ds);
         sprintf(code, "<DL, %d> ", index + 1);
+        sprintf(temp, "%d", index);
+        if (strlen(temp) < 2)
+            strcat(t_code, "0");
+        strcat(t_code, temp);
     }
     
     
@@ -36,18 +46,26 @@ char  *createIcCodeVar1(char *mn, char *op1, char *op2)
     {
         if (isStrInArr(op1, registers) != -1)
         {
-            index = isStrInArr(mn, registers);
+            index = isStrInArr(op1, registers);
             sprintf(temp, " %d ", index+1);
             strcat(code, temp);
+            sprintf(temp, "%d", index);
+            strcat(t_code, temp);
+            
         }
         else if(isStrInArr(op1, cc) != -1)
         {
             index = isStrInArr(op1, cc);
             sprintf(temp, " %d ", index + 1);
             strcat(code, temp);
+            sprintf(temp, "%d", index);
+            strcat(t_code, temp);
         }
         else
+        {
             is_data = 1;
+            strcat(t_code, "0");
+        }
     }
 
     if ((is_data == 1 || op2 != NULL) && (strcmp(mn, "START")))
@@ -59,16 +77,32 @@ char  *createIcCodeVar1(char *mn, char *op1, char *op2)
             l_temp = getLitAdd(temp);
             sprintf(temp, "<L, %d>", l_temp->no);
             strcat(code, temp);
+            if(l_temp->address < 10) 
+                sprintf(temp, "00%d", l_temp->address); 
+            else if(l_temp->address <100)
+                sprintf(temp, "0%d", l_temp->address);
+            else
+                sprintf(temp, "%d", l_temp->address);
+
+                strcat(t_code, temp);
         }
         else
         {
             s_temp = getSymbolAdd(temp);
             sprintf(temp, "<S, %d>", s_temp->no);
             strcat(code, temp);
+
+            if (s_temp->address < 10)
+                strcat(t_code, "00");
+            else if (s_temp->address < 100)
+                strcat(t_code, "0");
+            
+            sprintf(temp, "%d", s_temp->address);
+
+            strcat(t_code, temp);
         }
     }
-
-    return code;
+    return t_code;
 }
 
 char  *createIcCodeVar2(char *mn, char *op1, char *op2)

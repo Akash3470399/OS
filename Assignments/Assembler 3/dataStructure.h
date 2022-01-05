@@ -7,33 +7,32 @@ struct SymTab
     int no, address, defined, used, value;
     char *symbol;
     struct SymTab *next;
-}*s_start=NULL, *s_end=NULL, *temp_ptr = NULL;
+} *s_start = NULL, *s_end = NULL, *temp_ptr = NULL;
 
 struct LitTab
 {
-    int no , address;
+    int no, address;
     char *literal;
     struct LitTab *next;
-}*l_start = NULL, *l_end=NULL, *lit_ptr = NULL;
+} *l_start = NULL, *l_end = NULL, *lit_ptr = NULL;
 
 struct PoolTab
 {
     struct LitTab *literal;
     struct PoolTab *next;
-}*p_start= NULL, *p_end = NULL;
+} *p_start = NULL, *p_end = NULL;
 
 int LC = 0, symNo = 1, litNo = 1, isFirstLitInPass = 0;
 
+// **************  Symbol table  **************
 
-// **************  Symbol table  ************** 
-
-// 
-struct SymTab *newSymbolNode(char *symbol,int address, int defined, int used)
+//
+struct SymTab *newSymbolNode(char *symbol, int address, int defined, int used)
 {
     struct SymTab *st = (struct SymTab *)malloc(sizeof(struct SymTab));
     st->no = symNo++;
     st->value = -1;
-    st->symbol = (char *)malloc(sizeof(char)*10);
+    st->symbol = (char *)malloc(sizeof(char) * 10);
     strcpy(st->symbol, symbol);
     st->address = address;
     st->defined = defined;
@@ -45,22 +44,22 @@ struct SymTab *newSymbolNode(char *symbol,int address, int defined, int used)
 
 struct SymTab *getSymbolAdd(char *str)
 {
-    for(struct SymTab *i = s_start; i != NULL; i = i->next)
+    for (struct SymTab *i = s_start; i != NULL; i = i->next)
     {
-        if(strcmp(i->symbol, str) == 0)
-            return i; 
+        if (strcmp(i->symbol, str) == 0)
+            return i;
     }
     return NULL;
 }
 
 void addToSymTab(char *sym, int address, int defined, int used)
 {
-    if(s_end == NULL)
+    if (s_end == NULL)
     {
         s_start = newSymbolNode(sym, address, defined, used);
         s_end = s_start;
     }
-    else 
+    else
     {
         s_end->next = newSymbolNode(sym, address, defined, used);
         s_end = s_end->next;
@@ -69,25 +68,32 @@ void addToSymTab(char *sym, int address, int defined, int used)
 
 void printSymTab()
 {
-    printf("\nSymbol Table\n");
-    for(struct SymTab *i = s_start; i != NULL; i = i->next)
-        printf("%d : %s\t%d\t%d\t%d\t%d\n", i->no, i->symbol, i->address, i->defined, i->used, i->value);
+    struct SymTab *i;
+    printf("\n\t\tSymbol Table\nNo\tsym\tadd\tdefined\tused\tvalue\n");
+    for (i = s_start; i != NULL; i = i->next)
+        printf("%d\t%s\t%d\t%d\t%d\t%d\n", i->no, i->symbol, i->address, i->defined, i->used, i->value);
 }
 
-void printSymTabError()
+int printSymTabError()
 {
     struct SymTab *i;
-
-    for(i = s_start; i != NULL; i = i->next)
+    int err = 0;
+    for (i = s_start; i != NULL; i = i->next)
     {
-        if(i->defined > 1)
+        if (i->defined > 1)
+        {
             printf("ERROR : Re-declaration of symbol %s\n", i->symbol);
-        if(i->defined == 0 && i->used == 1)
+            err++;
+        }
+        if (i->defined == 0 && i->used == 1)
+        {
             printf("ERROR : Symbol %s is used but not defined. \n", i->symbol);
-        if(i->defined == 1 && i->used == 0)
+            err++;
+        }
+        if (i->defined == 1 && i->used == 0)
             printf("WARNING : %s defined but not used.\n", i->symbol);
-
     }
+    return err ;
 }
 
 // Literal table
@@ -137,21 +143,20 @@ void addToLitTab(char *literal)
     {
         addToPoolTable(l_end);
         isFirstLitInPass = 0;
-    }    
-    
+    }
 }
 
 void printLitTab()
 {
-    printf("\nLiteral Table\n");
+    printf("\n\t\tLiteral Table\nNo\tLit\tAddress\n");
     for (struct LitTab *i = l_start; i != NULL; i = i->next)
-        printf("%d : %s\t%d\t\n",i->no, i->literal, i->address);
+        printf("%d\t%s\t%d\t\n", i->no, i->literal, i->address);
 }
 
 struct LitTab *getLitAdd(char *lit)
 {
     struct LitTab *i;
-    for(i = l_start; i != NULL; i = i->next)
+    for (i = l_start; i != NULL; i = i->next)
     {
         if (strcmp(i->literal, lit) == 0)
             return i;
@@ -176,9 +181,9 @@ int isPresentInPool(char *lit)
 void giveAddToLits()
 {
     struct LitTab *i;
-    if(p_end != NULL)
+    if (p_end != NULL)
     {
-        for(i = p_end->literal; i != NULL; i = i->next)
+        for (i = p_end->literal; i != NULL; i = i->next)
             i->address = LC++;
         isFirstLitInPass = 1;
     }
